@@ -395,10 +395,6 @@ description:
         assert_equal @visitor.resolve_class('Range'), Range
       end
 
-      def test_resolve_class_with_symbol
-        assert_equal @visitor.resolve_class('Symbol'), Symbol
-      end
-
       def test_resolve_class_with_string
         assert_equal @visitor.resolve_class('String'), String
       end

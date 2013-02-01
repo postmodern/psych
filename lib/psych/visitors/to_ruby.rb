@@ -15,7 +15,7 @@ module Psych
         NilClass TrueClass FalseClass
         Numeric Integer Fixnum Bignum Float
         Rational Complex Range
-        Symbol String
+        String
         Regexp
         Time Date DateTime
         Array Hash
