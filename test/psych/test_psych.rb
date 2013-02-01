@@ -58,7 +58,7 @@ class TestPsych < Psych::TestCase
 
   def test_safe_load_with_whitelist
     assert_raises(Psych::WhitelistError) do
-      Psych.safe_load("--- !ruby/hash:EvilClass\nfoo: 1", nil)
+      Psych.safe_load("--- !ruby/hash:Object\nfoo: 1", nil)
     end
   end
 
@@ -142,7 +142,7 @@ class TestPsych < Psych::TestCase
   def test_safe_load_file_with_whitelist
     t = Tempfile.new(['yikes', 'yml'])
     t.binmode
-    t.write("--- !ruby/hash:EvilClass\nfoo: 1")
+    t.write("--- !ruby/hash:Object\nfoo: 1")
     t.close
 
     assert_raises(Psych::WhitelistError) do

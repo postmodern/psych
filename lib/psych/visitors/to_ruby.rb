@@ -1,5 +1,4 @@
 require 'psych/scalar_scanner'
-require 'psych/whitelisted'
 
 unless defined?(Regexp::NOENCODING)
   Regexp::NOENCODING = 32
@@ -10,30 +9,12 @@ module Psych
     ###
     # This class walks a YAML AST, converting each node to ruby
     class ToRuby < Psych::Visitors::Visitor
-      include Whitelisted
 
-      def initialize ss = nil, whitelist = nil
+      def initialize ss = ScalarScanner.new
         super()
 
-        case whitelist
-        when true
-          @whitelist = DEFAULT_WHITELIST
-        when Array
-          @whitelist = whitelist.map do |klass|
-            case klass
-            when Class, Module
-              klass.name
-            else
-              raise(TypeError,"#{klass.inspect} must be a Class or Module")
-            end
-          end
-        when NilClass # no-op
-        else
-          raise(TypeError,"whitelist must be true or an Array")
-        end
-
         @st = {}
-        @ss = ss || ScalarScanner.new(@whitelist)
+        @ss = ss
         @domain_types = Psych.domain_types
       end
 
@@ -114,7 +95,7 @@ module Psych
           args.push(args.delete_at(1) == '...')
           Range.new(*args)
         when /^!ruby\/sym(bol)?:?(.*)?$/
-          whitelist_symbol(o.value)
+          revive_symbol(o.value)
         else
           @ss.tokenize o.value
         end
@@ -169,11 +150,11 @@ module Psych
             s = register(o, klass.allocate)
 
             members = {}
-            struct_members = s.members.map { |x| whitelist_symbol(x) }
+            struct_members = s.members.map { |x| revive_symbol(x) }
             o.children.each_slice(2) do |k,v|
               member = accept(k)
               value  = accept(v)
-              if struct_members.include?(whitelist_symbol(member))
+              if struct_members.include?(revive_symbol(member))
                 s.send("#{member}=", value)
               else
                 members[member.to_s.sub(/^@/, '')] = value
@@ -183,7 +164,7 @@ module Psych
           else
             members = o.children.map { |c| accept c }
             fields  = Hash[*members]
-            struct  = Struct.new(*fields.map { |k,v| whitelist_symbol(k) })
+            struct  = Struct.new(*fields.map { |k,v| revive_symbol(k) })
 
             struct.new(*fields.map { |k,v| v })
           end
@@ -283,6 +264,10 @@ module Psych
         list
       end
 
+      def revive_symbol string
+        string.to_sym
+      end
+
       def revive_hash hash, o
         @st[o.anchor] = hash if o.anchor
 
@@ -351,10 +336,10 @@ module Psych
         return nil unless klassname and not klassname.empty?
 
         begin
-          path2class(whitelist_class(klassname))
-        rescue WhitelistError, ArgumentError, NameError => ex
+          path2class(klassname)
+        rescue ArgumentError, NameError => ex
           begin
-            path2class(whitelist_class("Struct::#{klassname}"))
+            path2class("Struct::#{klassname}")
           rescue ArgumentError, NameError => ex2
             raise(ex)
           end
