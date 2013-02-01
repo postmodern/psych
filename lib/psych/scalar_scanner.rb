@@ -1,9 +1,12 @@
+require 'psych/whitelisted'
 require 'strscan'
 
 module Psych
   ###
   # Scan scalars for built in types
   class ScalarScanner
+    include Whitelisted
+
     # Taken from http://yaml.org/type/timestamp.html
     TIME = /^\d{4}-\d{1,2}-\d{1,2}([Tt]|\s+)\d{1,2}:\d\d:\d\d(\.\d*)?(\s*Z|[-+]\d{1,2}(:\d\d)?)?/
 
@@ -19,8 +22,14 @@ module Psych
                   |[-+]?(?:0|[1-9][0-9_]*) (?# base 10)
                   |[-+]?0x[0-9a-fA-F_]+    (?# base 16))$/x
 
+    # Whitelist of Scalar Classes
+    attr_reader :whitelist
+
     # Create a new scanner
-    def initialize
+    def initialize(whitelist=nil)
+      super()
+
+      @whitelist    = whitelist
       @string_cache = {}
       @symbol_cache = {}
     end
@@ -75,9 +84,9 @@ module Psych
         Float::NAN
       when /^:./
         if string =~ /^:(["'])(.*)\1/
-          @symbol_cache[string] = $2.sub(/^:/, '').to_sym
+          @symbol_cache[string] = whitelist_symbol($2.sub(/^:/, ''))
         else
-          @symbol_cache[string] = string.sub(/^:/, '').to_sym
+          @symbol_cache[string] = whitelist_symbol(string.sub(/^:/, ''))
         end
       when /^[-+]?[0-9][0-9_]*(:[0-5]?[0-9])+$/
         i = 0

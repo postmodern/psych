@@ -26,7 +26,7 @@ module Psych
           ToRuby.new(nil, ['evil', 'user', 'input'])
         end
 
-        assert_match 'was not a Class or Module', ex.message
+        assert_match '"evil" must be a Class or Module', ex.message
       end
 
       def test_initialize_whitelist_with_other
@@ -429,14 +429,24 @@ description:
         end
       end
 
+      def test_ruby_symbol
+        ex = assert_raises(WhitelistError) do
+          Psych.safe_load('--- !ruby/symbol evil')
+        end
+
+        assert_equal ex.class_name, 'Symbol'
+      end
+
     end
 
-    class TestToRubyWithWhitelist < TestCase
+    class TestToRubyWithCustomWhitelist < TestCase
+
+      Struct.new('MyStruct',:x, :y)
 
       def setup
         super
         ToRuby.class_eval { public :resolve_class }
-        @whitelist = [Integer, String, Array]
+        @whitelist = [String, Hash, Struct::MyStruct]
         @visitor   = ToRuby.new(nil, @whitelist)
       end
 
@@ -445,15 +455,35 @@ description:
       end
 
       def test_resolve_class_with_whitelisted_class_name
-        assert_equal @visitor.resolve_class('Integer'), Integer
-        assert_equal @visitor.resolve_class('String'), String
-        assert_equal @visitor.resolve_class('Array'), Array
+        assert_equal String, @visitor.resolve_class('String')
+        assert_equal Hash, @visitor.resolve_class('Hash')
+        assert_equal Struct::MyStruct, @visitor.resolve_class('MyStruct')
       end
 
       def test_resolve_class_with_unknown_class_name
         assert_raises(WhitelistError) do
           @visitor.resolve_class('Float')
         end
+      end
+
+      def test_struct
+        yaml = "--- !ruby/struct:MyStruct\n  x: 1\n  y: 2\n"
+
+        ex = assert_raises(WhitelistError) do
+          Psych.safe_load(yaml,nil,@whitelist)
+        end
+
+        assert_equal 'Symbol', ex.class_name
+      end
+
+      def test_anonymous_struct
+        yaml = "--- !ruby/struct\nx: 1\ny: 2\n"
+
+        ex = assert_raises(WhitelistError) do
+          Psych.safe_load(yaml,nil,@whitelist)
+        end
+
+        assert_equal 'Symbol', ex.class_name
       end
 
     end

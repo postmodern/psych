@@ -1,5 +1,5 @@
 require 'psych/scalar_scanner'
-require 'psych/whitelist_error'
+require 'psych/whitelisted'
 
 unless defined?(Regexp::NOENCODING)
   Regexp::NOENCODING = 32
@@ -10,25 +10,10 @@ module Psych
     ###
     # This class walks a YAML AST, converting each node to ruby
     class ToRuby < Psych::Visitors::Visitor
-      # The default whitelist of class names to allow
-      DEFAULT_WHITELIST = %w[
-        NilClass TrueClass FalseClass
-        Numeric Integer Fixnum Bignum Float
-        Rational Complex Range
-        String
-        Regexp
-        Time Date DateTime
-        Array Hash
-      ]
-
-      # The whitelist used to resolve classes and modules
-      attr_reader :whitelist
+      include Whitelisted
 
       def initialize ss = nil, whitelist = nil
         super()
-        @st = {}
-        @ss = ss || ScalarScanner.new
-        @domain_types = Psych.domain_types
 
         case whitelist
         when true
@@ -39,13 +24,17 @@ module Psych
             when Class, Module
               klass.name
             else
-              raise(TypeError,"#{klass.inspect} was not a Class or Module")
+              raise(TypeError,"#{klass.inspect} must be a Class or Module")
             end
           end
         when NilClass # no-op
         else
           raise(TypeError,"whitelist must be true or an Array")
         end
+
+        @st = {}
+        @ss = ss || ScalarScanner.new(@whitelist)
+        @domain_types = Psych.domain_types
       end
 
       def accept target
@@ -125,7 +114,7 @@ module Psych
           args.push(args.delete_at(1) == '...')
           Range.new(*args)
         when /^!ruby\/sym(bol)?:?(.*)?$/
-          o.value.to_sym
+          whitelist_symbol(o.value)
         else
           @ss.tokenize o.value
         end
@@ -180,11 +169,11 @@ module Psych
             s = register(o, klass.allocate)
 
             members = {}
-            struct_members = s.members.map { |x| x.to_sym }
+            struct_members = s.members.map { |x| whitelist_symbol(x) }
             o.children.each_slice(2) do |k,v|
               member = accept(k)
               value  = accept(v)
-              if struct_members.include?(member.to_sym)
+              if struct_members.include?(whitelist_symbol(member))
                 s.send("#{member}=", value)
               else
                 members[member.to_s.sub(/^@/, '')] = value
@@ -193,8 +182,10 @@ module Psych
             init_with(s, members, o)
           else
             members = o.children.map { |c| accept c }
-            h = Hash[*members]
-            Struct.new(*h.map { |k,v| k.to_sym }).new(*h.map { |k,v| v })
+            fields  = Hash[*members]
+            struct  = Struct.new(*fields.map { |k,v| whitelist_symbol(k) })
+
+            struct.new(*fields.map { |k,v| v })
           end
 
         when /^!ruby\/object:?(.*)?$/
@@ -359,22 +350,14 @@ module Psych
       def resolve_class klassname
         return nil unless klassname and not klassname.empty?
 
-        if @whitelist and not @whitelist.include?(klassname)
-          raise(WhitelistError.new(klassname,@whitelist))
-        end
-
-        name    = klassname
-        retried = false
-
         begin
-          path2class(name)
-        rescue ArgumentError, NameError => ex
-          unless retried
-            name    = "Struct::#{name}"
-            retried = ex
-            retry
+          path2class(whitelist_class(klassname))
+        rescue WhitelistError, ArgumentError, NameError => ex
+          begin
+            path2class(whitelist_class("Struct::#{klassname}"))
+          rescue ArgumentError, NameError => ex2
+            raise(ex)
           end
-          raise retried
         end
       end
     end
