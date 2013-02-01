@@ -131,6 +131,30 @@ module Psych
   end
 
   ###
+  # Load +yaml+ in to a Ruby data structure.  If multiple documents are
+  # provided, the object contained in the first document will be returned.
+  # +filename+ will be used in the exception message if any exception is raised
+  # while parsing.
+  #
+  # Raises a Psych::SyntaxError when a YAML syntax error is detected.
+  #
+  # Example:
+  #
+  #   Psych.safe_load("--- a")                              # => 'a'
+  #   Psych.safe_load("---\n - a\n - b", [String, Array])   # => ['a', 'b']
+  #
+  #   begin
+  #     Psych.safe_load(user_input, "file.txt")
+  #   rescue Psych::WhitelistError => ex
+  #     ex.message # => "\"DRb::DRbServer\" was not included in the whitelist"
+  #   end
+  def self.safe_load yaml, filename = nil, whitelist = true
+    result = parse(yaml, filename)
+    result ? result.to_ruby(whitelist) : result
+  end
+
+
+  ###
   # Parse a YAML string in +yaml+.  Returns the first object of a YAML AST.
   # +filename+ is used in the exception message if a Psych::SyntaxError is
   # raised.
@@ -293,10 +317,46 @@ module Psych
   end
 
   ###
+  # Load multiple documents given in +yaml+.  Returns the parsed documents
+  # as a list.  If a block is given, each document will be converted to ruby
+  # and passed to the block during parsing
+  #
+  # Example:
+  #
+  #   Psych.safe_load_stream("--- foo\n...\n--- bar\n...") # => ['foo', 'bar']
+  #
+  #   list = []
+  #   Psych.safe_load_stream("--- foo\n...\n--- bar\n...") do |ruby|
+  #     list << ruby
+  #   end
+  #   list # => ['foo', 'bar']
+  #
+  def self.safe_load_stream yaml, filename = nil, whitelist = true
+    if block_given?
+      parse_stream(yaml, filename) do |node|
+        yield node.to_ruby(whitelist)
+      end
+    else
+      parse_stream(yaml, filename).children.map do |child|
+        child.to_ruby(whitelist)
+      end
+    end
+  end
+
+  ###
   # Load the document contained in +filename+.  Returns the yaml contained in
   # +filename+ as a ruby object
   def self.load_file filename
     File.open(filename, 'r:bom|utf-8') { |f| self.load f, filename }
+  end
+
+  ###
+  # Load the document contained in +filename+.  Returns the yaml contained in
+  # +filename+ as a ruby object
+  def self.safe_load_file filename, whitelist = true
+    File.open(filename, 'r:bom|utf-8') do |f|
+      self.safe_load f, filename, whitelist
+    end
   end
 
   # :stopdoc:

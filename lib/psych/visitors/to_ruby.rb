@@ -1,4 +1,5 @@
 require 'psych/scalar_scanner'
+require 'psych/whitelist_error'
 
 unless defined?(Regexp::NOENCODING)
   Regexp::NOENCODING = 32
@@ -9,11 +10,42 @@ module Psych
     ###
     # This class walks a YAML AST, converting each node to ruby
     class ToRuby < Psych::Visitors::Visitor
-      def initialize ss = ScalarScanner.new
+      # The default whitelist of class names to allow
+      DEFAULT_WHITELIST = %w[
+        NilClass TrueClass FalseClass
+        Numeric Integer Fixnum Bignum Float
+        Rational Complex Range
+        Symbol String
+        Regexp
+        Time Date DateTime
+        Array Hash
+      ]
+
+      # The whitelist used to resolve classes and modules
+      attr_reader :whitelist
+
+      def initialize ss = nil, whitelist = nil
         super()
         @st = {}
-        @ss = ss
+        @ss = ss || ScalarScanner.new
         @domain_types = Psych.domain_types
+
+        case whitelist
+        when true
+          @whitelist = DEFAULT_WHITELIST
+        when Array
+          @whitelist = whitelist.map do |klass|
+            case klass
+            when Class, Module
+              klass.name
+            else
+              raise(TypeError,"#{klass.inspect} was not a Class or Module")
+            end
+          end
+        when NilClass # no-op
+        else
+          raise(TypeError,"whitelist must be true or an Array")
+        end
       end
 
       def accept target
@@ -326,6 +358,10 @@ module Psych
       # Convert +klassname+ to a Class
       def resolve_class klassname
         return nil unless klassname and not klassname.empty?
+
+        if @whitelist and not @whitelist.include?(klassname)
+          raise(WhitelistError.new(klassname,@whitelist))
+        end
 
         name    = klassname
         retried = false

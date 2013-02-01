@@ -56,6 +56,12 @@ class TestPsych < Psych::TestCase
     assert_equal 'undefined class/module NonExistent', e.message
   end
 
+  def test_safe_load_with_whitelist
+    assert_raises(Psych::WhitelistError) do
+      Psych.safe_load("--- !ruby/hash:EvilClass\nfoo: 1", nil)
+    end
+  end
+
   def test_dump_stream
     things = [22, "foo \n", {}]
     stream = Psych.dump_stream(*things)
@@ -130,6 +136,19 @@ class TestPsych < Psych::TestCase
     t.write('--- hello world')
     t.close
     assert_equal 'hello world', Psych.load_file(t.path)
+    t.close(true)
+  end
+
+  def test_safe_load_file_with_whitelist
+    t = Tempfile.new(['yikes', 'yml'])
+    t.binmode
+    t.write("--- !ruby/hash:EvilClass\nfoo: 1")
+    t.close
+
+    assert_raises(Psych::WhitelistError) do
+      Psych.safe_load_file(t.path)
+    end
+
     t.close(true)
   end
 

@@ -9,6 +9,34 @@ module Psych
         @visitor = ToRuby.new
       end
 
+      def test_initialize_whitelist_with_true
+        visitor = ToRuby.new(nil, true)
+
+        assert_equal visitor.whitelist, ToRuby::DEFAULT_WHITELIST
+      end
+
+      def test_initialize_whitelist_with_array_of_classes
+        visitor = ToRuby.new(nil, [String, Integer, Array])
+
+        assert_equal visitor.whitelist, %w[String Integer Array]
+      end
+
+      def test_initialize_whitelist_with_array_of_strings
+        ex = assert_raises(TypeError) do
+          ToRuby.new(nil, ['evil', 'user', 'input'])
+        end
+
+        assert_match 'was not a Class or Module', ex.message
+      end
+
+      def test_initialize_whitelist_with_other
+        ex = assert_raises(TypeError) do
+          ToRuby.new(nil, Object.new)
+        end
+
+        assert_equal 'whitelist must be true or an Array', ex.message
+      end
+
       def test_object
         mapping = Nodes::Mapping.new nil, "!ruby/object"
         mapping.children << Nodes::Scalar.new('foo')
@@ -321,6 +349,117 @@ description:
         assert_equal %w{ foo foo }, list
         assert_equal list[0].object_id, list[1].object_id
       end
+    end
+
+    class TestToRubyWithDefaultWhitelist < TestCase
+
+      def setup
+        super
+        ToRuby.class_eval { public :resolve_class }
+        @visitor = ToRuby.new(nil, true)
+      end
+
+      def teardown
+        ToRuby.class_eval { private :resolve_class }
+      end
+
+      def test_resolve_class_with_numeric
+        assert_equal @visitor.resolve_class('Numeric'), Numeric
+      end
+
+      def test_resolve_class_with_integer
+        assert_equal @visitor.resolve_class('Integer'), Integer
+      end
+
+      def test_resolve_class_with_fixnum
+        assert_equal @visitor.resolve_class('Fixnum'), Fixnum
+      end
+
+      def test_resolve_class_with_bignum
+        assert_equal @visitor.resolve_class('Bignum'), Bignum
+      end
+
+      def test_resolve_class_with_float
+        assert_equal @visitor.resolve_class('Float'), Float
+      end
+
+      def test_resolve_class_with_rational
+        assert_equal @visitor.resolve_class('Rational'), Rational
+      end
+
+      def test_resolve_class_with_complex
+        assert_equal @visitor.resolve_class('Complex'), Complex
+      end
+
+      def test_resolve_class_with_range
+        assert_equal @visitor.resolve_class('Range'), Range
+      end
+
+      def test_resolve_class_with_symbol
+        assert_equal @visitor.resolve_class('Symbol'), Symbol
+      end
+
+      def test_resolve_class_with_string
+        assert_equal @visitor.resolve_class('String'), String
+      end
+
+      def test_resolve_class_with_regexp
+        assert_equal @visitor.resolve_class('Regexp'), Regexp
+      end
+
+      def test_resolve_class_with_time
+        assert_equal @visitor.resolve_class('Time'), Time
+      end
+
+      def test_resolve_class_with_date
+        assert_equal @visitor.resolve_class('Date'), Date
+      end
+
+      def test_resolve_class_with_date_time
+        assert_equal @visitor.resolve_class('DateTime'), DateTime
+      end
+
+      def test_resolve_class_with_array
+        assert_equal @visitor.resolve_class('Array'), Array
+      end
+
+      def test_resolve_class_with_hash
+        assert_equal @visitor.resolve_class('Hash'), Hash
+      end
+
+      def test_resolve_class_with_unknown_class_name
+        assert_raises(WhitelistError) do
+          @visitor.resolve_class('Kernel')
+        end
+      end
+
+    end
+
+    class TestToRubyWithWhitelist < TestCase
+
+      def setup
+        super
+        ToRuby.class_eval { public :resolve_class }
+        @whitelist = [Integer, String, Array]
+        @visitor   = ToRuby.new(nil, @whitelist)
+      end
+
+      def teardown
+        ToRuby.class_eval { private :resolve_class }
+      end
+
+      def test_resolve_class_with_whitelisted_class_name
+        assert_equal @visitor.resolve_class('Integer'), Integer
+        assert_equal @visitor.resolve_class('String'), String
+        assert_equal @visitor.resolve_class('Array'), Array
+      end
+
+      def test_resolve_class_with_unknown_class_name
+        assert_raises(WhitelistError) do
+          @visitor.resolve_class('Float')
+        end
+      end
+
     end
   end
 end
