@@ -364,63 +364,63 @@ description:
       end
 
       def test_resolve_class_with_numeric
-        assert_equal @visitor.resolve_class('Numeric'), Numeric
+        assert_equal Numeric, @visitor.resolve_class('Numeric')
       end
 
       def test_resolve_class_with_integer
-        assert_equal @visitor.resolve_class('Integer'), Integer
+        assert_equal Integer, @visitor.resolve_class('Integer')
       end
 
       def test_resolve_class_with_fixnum
-        assert_equal @visitor.resolve_class('Fixnum'), Fixnum
+        assert_equal Fixnum, @visitor.resolve_class('Fixnum')
       end
 
       def test_resolve_class_with_bignum
-        assert_equal @visitor.resolve_class('Bignum'), Bignum
+        assert_equal Bignum, @visitor.resolve_class('Bignum')
       end
 
       def test_resolve_class_with_float
-        assert_equal @visitor.resolve_class('Float'), Float
+        assert_equal Float, @visitor.resolve_class('Float')
       end
 
       def test_resolve_class_with_rational
-        assert_equal @visitor.resolve_class('Rational'), Rational
+        assert_equal Rational, @visitor.resolve_class('Rational')
       end
 
       def test_resolve_class_with_complex
-        assert_equal @visitor.resolve_class('Complex'), Complex
+        assert_equal Complex, @visitor.resolve_class('Complex')
       end
 
       def test_resolve_class_with_range
-        assert_equal @visitor.resolve_class('Range'), Range
+        assert_equal Range, @visitor.resolve_class('Range')
       end
 
       def test_resolve_class_with_string
-        assert_equal @visitor.resolve_class('String'), String
+        assert_equal String, @visitor.resolve_class('String')
       end
 
       def test_resolve_class_with_regexp
-        assert_equal @visitor.resolve_class('Regexp'), Regexp
+        assert_equal Regexp, @visitor.resolve_class('Regexp')
       end
 
       def test_resolve_class_with_time
-        assert_equal @visitor.resolve_class('Time'), Time
+        assert_equal Time, @visitor.resolve_class('Time')
       end
 
       def test_resolve_class_with_date
-        assert_equal @visitor.resolve_class('Date'), Date
+        assert_equal Date, @visitor.resolve_class('Date')
       end
 
       def test_resolve_class_with_date_time
-        assert_equal @visitor.resolve_class('DateTime'), DateTime
+        assert_equal DateTime, @visitor.resolve_class('DateTime')
       end
 
       def test_resolve_class_with_array
-        assert_equal @visitor.resolve_class('Array'), Array
+        assert_equal Array, @visitor.resolve_class('Array')
       end
 
       def test_resolve_class_with_hash
-        assert_equal @visitor.resolve_class('Hash'), Hash
+        assert_equal Hash, @visitor.resolve_class('Hash')
       end
 
       def test_resolve_class_with_unknown_class_name
@@ -434,7 +434,7 @@ description:
           Psych.safe_load('--- !ruby/symbol evil')
         end
 
-        assert_equal ex.class_name, 'Symbol'
+        assert_equal 'Symbol', ex.class_name
       end
 
     end
