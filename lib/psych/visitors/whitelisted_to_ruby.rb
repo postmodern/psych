@@ -33,6 +33,12 @@ module Psych
         whitelist_symbol string
       end
 
+      def resolve_tag tag
+        if klass = super(tag) and whitelist_class(klass.name)
+          klass 
+        end
+      end
+
       def resolve_class klassname
         klass = super(klassname)
 

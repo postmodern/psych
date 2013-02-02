@@ -34,7 +34,7 @@ module Psych
       end
 
       def deserialize o
-        if klass = Psych.load_tags[o.tag]
+        if klass = resolve_tag(o.tag)
           instance = klass.allocate
 
           if instance.respond_to?(:init_with)
@@ -107,7 +107,7 @@ module Psych
       end
 
       def visit_Psych_Nodes_Sequence o
-        if klass = Psych.load_tags[o.tag]
+        if klass = resolve_tag(o.tag)
           instance = klass.allocate
 
           if instance.respond_to?(:init_with)
@@ -139,8 +139,13 @@ module Psych
       end
 
       def visit_Psych_Nodes_Mapping o
-        return revive(Psych.load_tags[o.tag], o) if Psych.load_tags[o.tag]
-        return revive_hash({}, o) unless o.tag
+        if klass = resolve_tag(o.tag)
+          return revive(klass, o)
+        end
+
+        unless o.tag
+          return revive_hash({}, o)
+        end
 
         case o.tag
         when /^!ruby\/struct:?(.*)?$/
@@ -329,6 +334,10 @@ module Psych
           h.each { |k,v| o.instance_variable_set(:"@#{k}", v) }
         end
         o
+      end
+
+      def resolve_tag tag
+        Psych.load_tags[tag]
       end
 
       # Convert +klassname+ to a Class
