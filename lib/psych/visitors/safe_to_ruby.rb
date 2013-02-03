@@ -1,10 +1,10 @@
 require 'psych/visitors/to_ruby'
 require 'psych/whitelisted'
-require 'psych/whitelisted_scalar_scanner'
+require 'psych/safe_scalar_scanner'
 
 module Psych
   module Visitors
-    class WhitelistedToRuby < ToRuby
+    class SafeToRuby < ToRuby
       include Whitelisted
 
       def initialize whitelist = true
@@ -24,7 +24,7 @@ module Psych
           raise(TypeError,"whitelist must be true or an Array")
         end
 
-        super(WhitelistedScalarScanner.new(@whitelist))
+        super(SafeScalarScanner.new(@whitelist))
       end
 
       private

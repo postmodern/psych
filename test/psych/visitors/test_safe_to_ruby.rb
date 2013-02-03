@@ -3,27 +3,27 @@ require 'psych/helper'
 
 module Psych
   module Visitors
-    class TestWhitelistedToRuby < TestCase
+    class TestSafeToRuby < TestCase
       def setup
         super
-        @visitor = WhitelistedToRuby.new
+        @visitor = SafeToRuby.new
       end
 
       def test_initialize_with_true
-        visitor = WhitelistedToRuby.new(true)
+        visitor = SafeToRuby.new(true)
 
-        assert_equal visitor.whitelist, WhitelistedToRuby::DEFAULT_WHITELIST
+        assert_equal visitor.whitelist, SafeToRuby::DEFAULT_WHITELIST
       end
 
       def test_initialize_with_array_of_classes
-        visitor = WhitelistedToRuby.new([String, Integer, Array])
+        visitor = SafeToRuby.new([String, Integer, Array])
 
         assert_equal visitor.whitelist, %w[String Integer Array]
       end
 
       def test_initialize_with_array_of_strings
         ex = assert_raises(TypeError) do
-          WhitelistedToRuby.new(['evil', 'user', 'input'])
+          SafeToRuby.new(['evil', 'user', 'input'])
         end
 
         assert_match '"evil" must be a Class or Module', ex.message
@@ -31,7 +31,7 @@ module Psych
 
       def test_initialize_with_other
         ex = assert_raises(TypeError) do
-          WhitelistedToRuby.new(Object.new)
+          SafeToRuby.new(Object.new)
         end
 
         assert_equal 'whitelist must be true or an Array', ex.message
@@ -39,16 +39,16 @@ module Psych
 
     end
 
-    class TestWhitelistedToRubyWithDefaultWhitelist < TestCase
+    class TestSafeToRubyWithDefaultWhitelist < TestCase
 
       def setup
         super
-        WhitelistedToRuby.class_eval { public :resolve_class }
-        @visitor = WhitelistedToRuby.new(true)
+        SafeToRuby.class_eval { public :resolve_class }
+        @visitor = SafeToRuby.new(true)
       end
 
       def teardown
-        WhitelistedToRuby.class_eval { private :resolve_class }
+        SafeToRuby.class_eval { private :resolve_class }
       end
 
       def test_resolve_class_with_numeric
@@ -127,20 +127,20 @@ module Psych
 
     end
 
-    class TestWhitelistedToRubyWithCustomWhitelist < TestCase
+    class TestSafeToRubyWithCustomWhitelist < TestCase
 
       Struct.new('MyStruct',:x, :y)
 
       def setup
         super
-        WhitelistedToRuby.class_eval { public :resolve_class }
+        SafeToRuby.class_eval { public :resolve_class }
 
         @whitelist = [String, Hash, Struct::MyStruct]
-        @visitor   = WhitelistedToRuby.new(@whitelist)
+        @visitor   = SafeToRuby.new(@whitelist)
       end
 
       def teardown
-        WhitelistedToRuby.class_eval { private :resolve_class }
+        SafeToRuby.class_eval { private :resolve_class }
       end
 
       def test_resolve_class_with_whitelisted_class_name

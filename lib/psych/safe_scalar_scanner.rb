@@ -2,7 +2,7 @@ require 'psych/scalar_scanner'
 require 'psych/whitelisted'
 
 module Psych
-  class WhitelistedScalarScanner < ScalarScanner
+  class SafeScalarScanner < ScalarScanner
 
     include Whitelisted
 

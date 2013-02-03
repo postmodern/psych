@@ -1,5 +1,5 @@
 require 'psych/visitors/to_ruby'
-require 'psych/visitors/whitelisted_to_ruby'
+require 'psych/visitors/safe_to_ruby'
 require 'stringio'
 
 module Psych
@@ -35,7 +35,7 @@ module Psych
       # See also Psych::Visitors::ToRuby
       def to_ruby whitelist = nil
         if whitelist
-          Visitors::WhitelistedToRuby.new(whitelist).accept self
+          Visitors::SafeToRuby.new(whitelist).accept self
         else
           Visitors::ToRuby.new.accept self
         end
